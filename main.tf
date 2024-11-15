@@ -12,6 +12,7 @@ provider "azurerm" {
   features {}
 }
 
+# Create a resource group
 resource "azurerm_resource_group" "mtc-rg" {
   name     = "mtc-resources"
   location = "Central India"
@@ -20,6 +21,7 @@ resource "azurerm_resource_group" "mtc-rg" {
   }
 }
 
+# Add a virtual network
 resource "azurerm_virtual_network" "mtc-vn" {
   name                = "mtc-network"
   resource_group_name = azurerm_resource_group.mtc-rg.name
@@ -31,6 +33,7 @@ resource "azurerm_virtual_network" "mtc-vn" {
   }
 }
 
+# Add a subnet
 resource "azurerm_subnet" "mtc-subnet" {
   name                 = "mtc-subnet"
   resource_group_name  = azurerm_resource_group.mtc-rg.name
@@ -38,6 +41,7 @@ resource "azurerm_subnet" "mtc-subnet" {
   address_prefixes     = ["10.123.1.0/24"]
 }
 
+# Add a security group
 resource "azurerm_network_security_group" "mtc-sg" {
   name                = "mtc-sg"
   location            = azurerm_resource_group.mtc-rg.location
@@ -48,6 +52,7 @@ resource "azurerm_network_security_group" "mtc-sg" {
   }
 }
 
+# Add a security rule
 resource "azurerm_network_security_rule" "mtc-dev-rule" {
   name                        = "mtc-dev-rule"
   priority                    = 100
@@ -62,11 +67,13 @@ resource "azurerm_network_security_rule" "mtc-dev-rule" {
   network_security_group_name = azurerm_network_security_group.mtc-sg.name
 }
 
+# Associate the security group with the subnet
 resource "azurerm_subnet_network_security_group_association" "mtc-sga" {
   subnet_id                 = azurerm_subnet.mtc-subnet.id
   network_security_group_id = azurerm_network_security_group.mtc-sg.id
 }
 
+# Add a public IP
 resource "azurerm_public_ip" "mtc-ip" {
   name                = "mtc-ip"
   resource_group_name = azurerm_resource_group.mtc-rg.name
@@ -78,6 +85,7 @@ resource "azurerm_public_ip" "mtc-ip" {
   }
 }
 
+# Add a network interface
 resource "azurerm_network_interface" "mtc-nic" {
   name                = "mtc-nic"
   location            = azurerm_resource_group.mtc-rg.location
@@ -95,19 +103,22 @@ resource "azurerm_network_interface" "mtc-nic" {
   }
 }
 
+# Add a virtual machine
 resource "azurerm_linux_virtual_machine" "mtc-vm" {
   name                = "mtc-vm"
   resource_group_name = azurerm_resource_group.mtc-rg.name
   location            = azurerm_resource_group.mtc-rg.location
-  size                = "Standard_F2"
+  size                = "Standard_F1"
   admin_username      = "adminuser"
   network_interface_ids = [
     azurerm_network_interface.mtc-nic.id,
   ]
 
+  custom_data = filebase64("customdata.tpl")
+
   admin_ssh_key {
     username   = "adminuser"
-    public_key = file("~/.ssh/id_rsa.pub")
+    public_key = file("~/.ssh/mtcazurekey.pub")
   }
 
   os_disk {
@@ -121,4 +132,17 @@ resource "azurerm_linux_virtual_machine" "mtc-vm" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+data "azurerm_public_ip" "mtc-ip-data" {
+    name = azurerm_public_ip.mtc-ip.name
+    resource_group_name = azurerm_resource_group.mtc-rg.name
+}
+
+output "public_ip_address" {
+    value = "${azurerm_linux_virtual_machine.mtc-vm.name}:${data.azurerm_public_ip.mtc-ip-data.ip_address}"
 }
