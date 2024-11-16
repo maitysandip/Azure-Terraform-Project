@@ -6,6 +6,10 @@ By using this project, you can automate the provisioning of your Azure infrastru
 
 Whether you are setting up a new environment or managing an existing one, this project provides a solid foundation for your infrastructure as code needs on Azure.
 
+It also includes a feature to add entries to your hosts file. This can be useful for setting up local DNS entries for your deployed resources. The necessary scripts and configuration are included to automate this process, ensuring that your hosts file is updated with the correct entries after deployment.
+
+![Terraform Azure](Assets/Terraform_Azure.png)
+
 ## Prerequisites
 
 - [Terraform](https://www.terraform.io/downloads.html) installed
